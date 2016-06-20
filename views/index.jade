@@ -1,0 +1,121 @@
+doctype html
+html
+  head
+    meta(charset='utf-8')
+    meta(name='description', content='Web Recorder to record and replay in the Browser')
+    meta(name='viewport', content='width=device-width, user-scalable=yes, initial-scale=1, maximum-scale=1')
+    meta(itemprop='description', content='Web Recorder to record and replay in the Browser')
+    meta(itemprop='image', content='images/webrtc-icon-192x192.png')
+    meta(itemprop='name', content='Web Recorder')
+    meta(name='mobile-web-app-capable', content='yes')
+    meta#theme-color(name='theme-color', content='#ffffff')
+    base(target='_blank')
+    title &#x1f3a5; Web Recorder
+    link(rel='icon', sizes='192x192', href='images/webrtc-icon-192x192.png')
+    link(href='/css/index.css', rel='stylesheet', type='text/css')
+  body
+    .mainPage
+      h1 &#x1f3a5; Web Recorder
+      p Hi! Have a play! Its pretty simple just press the start button below
+      p
+        | You need to have a camera attached! 
+        button#refreshButton
+          i.fa.fa-refresh
+      .mediaBlock
+        h3 Audio Inputs
+        ul#listOfAudioInputs
+          li Checking device mechanics...
+      .mediaBlock
+        h3 Audio Outputs
+        ul#listOfAudioOutputs
+          li Checking device mechanics...
+      .mediaBlock
+        h3 Video Inputs
+        ul#listOfVideoInputs
+          li Checking device mechanics...
+    .videopage
+      .menu.hidden
+        button#startButton Start Recording
+        button#clearButton Clear Videos
+        #faceTrackingSwitch.checkboxContainer.noselect
+          .warning Experimental! May severely slow down computer!
+          i.checkbox.fa.fa-square-o
+          i.checkbox.fa.fa-check-square
+          span Enable Facial Tracking
+        button#saveButton Save Videos
+      .requirements
+        p
+          | Requires Chrome 
+          b 49
+          |  or Firefox 
+          b 25
+          | !
+        h2#noSupport.hidden Sorry! Your browser isn't supported, please use a supported browser!
+        noscript Sorry! Your browser isn't supported, please use a supported browser!
+      .audioTools
+        .audioBox
+          .audioLevel
+        .frequencyBox
+          .frequencyLevel
+      .videoCover
+    .numberContainer
+      .giantNumber 5
+      .giantNumber 4
+      .giantNumber 3
+      .giantNumber 2
+      .giantNumber 1
+    #canvasContainer
+    .aboutPage
+      h2 About
+      p This page is made by Ben Lu from New Zealand
+      h4 Technologies
+      h5 Server Side
+      .mediaBlock
+        h3 HTTP/2
+        div
+          p The new, faster http protocol for web servers!
+      .mediaBlock
+        h3 TLS/SSL
+        div
+          p
+            | Online security protocol to ensure no one like ISPs are listening to, or meddling with your data transmission.
+      .mediaBlock
+        h3 NodeJS
+        div
+          p Webserver of choice, designed for web development
+      h5 Client Side
+      .mediaBlock
+        h3 WebRTC
+        div
+          p
+            | This is a very experimental technology currently only available on the latest Firefox and Chrome browsers, with spotty support on others
+      .mediaBlock
+        h3 RecordRTC
+        div
+          p
+            | This builds on WebRTC and the MediaRecorder API to record video in local storage!
+          p
+            | At some point I want to move this straight to a native MediaRecorder API implementation
+      .mediaBlock
+        h3 CCV
+        div
+          p This is a facial recognition library with a cascade to detect faces in images
+      .mediaBlock
+        h3 ES2015
+        div
+          p
+            | This is the latest javascript built in to the latest browser. This can be transpiled back to ES5 by a transpiler like babel for backward compatibility
+    script.
+      if (!MediaRecorder || !MediaRecorder.isTypeSupported ||
+      !MediaRecorder.isTypeSupported('video/webm')) {
+        document.getElementById('noSupport').className = null;
+      }
+    script(src='/js/ccv.js')
+    script(src='/js/scripts.js')
+    //-script(src='js/RecordRTC.js')
+    //-script(src='js/ccv.js')
+    //-script(src='js/face.js')
+    //-script(src='js/adapter.js')
+    //-script(src='js/common.js')
+    //-script(src='js/helper.js')
+    //script(src='js/main.js')

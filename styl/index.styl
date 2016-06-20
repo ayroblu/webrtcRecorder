@@ -1,0 +1,245 @@
+@require "custom/font-awesome.min.css"
+@require "base"
+
+// Colour Palette 
+// 414 - Party Confetti - dark purple
+// b15 - Sugar Hearts You - light maroon
+// e70 - Sugar Cocktail - light orange
+// fc0 - Bursts Of Euphoria - pasty yellow
+// 891 - Happy Balloon - dark green
+.mainPage h1
+  padding:100px 0 10px 0
+  color:white
+  background:#b15
+  box-shadow:0 0 10px #555
+  font-weight:300
+  margin-bottom:10px
+
+.mediaBlock
+  display:inline-block
+  box-shadow:0 0 10px #555
+  margin:10px
+  vertical-align:top
+  overflow:hidden
+
+  h3
+    padding:5px 10px
+    color:white
+    background:#891
+    box-shadow: 0 0 5px #555
+
+  ul
+    padding:5px 10px
+
+.videoCover
+  position:fixed
+  left:0
+  right:0
+  top:0
+  bottom:0
+  background:#888
+  opacity:0.8
+  display:none
+
+.vidLabel
+  position:fixed
+  z-index:1
+  color:white
+  text-shadow:0 0 5px #000
+  padding:10px
+  opacity:0
+  transition:opacity 0.3s
+
+.vidLabel:hover
+  opacity:1 
+.giantNumber
+  position:fixed
+  z-index:5
+  opacity:0
+  pointer-events:none
+  transition: font-size 1s ease-in-out
+  font-size:400px
+  color:white
+  text-shadow:0 0 10px #000
+  top:0
+  left:0
+  right:0
+  bottom:0
+  text-align:center
+
+.menu
+  transition:opacity 0.3s
+
+.menu.videoPlaying
+  transition:opacity 0.3s 1s
+  opacity:0.1
+  position:fixed
+  top:0
+  left:0
+  right:0
+  z-index:3
+  background:#fff
+  box-shadow:0 0 10px #555
+
+.menu.videoPlaying:hover
+  transition:opacity 0.3s
+  opacity:1
+
+// Probably needs a class name
+canvas
+  pointer-events:none
+
+.checkboxContainer:hover .warning
+  opacity:1
+  top:30px
+
+.checkboxContainer
+  padding: 10px
+  cursor:pointer
+  display:inline-block
+  margin: 5px
+  position:relative
+
+  .warning
+    opacity:0
+    pointer-events:none
+    position:absolute
+    top:20px
+    font-size:0.5em
+    transition:all 0.3s
+    color:#e53
+
+  .checkbox
+    transition:all 0.2s
+    margin:0 5px
+    display:none
+    font-size:1.2em
+
+  .checkbox.fa-square-o
+    display:inline-block
+
+.checkboxContainer.enabled
+  .checkbox.fa-square-o
+    display:none
+
+  .checkbox.fa-check-square
+    display:inline-block
+    color:#5dd
+
+button
+  cursor:pointer
+  margin:5px
+  background-color: #e70
+  border: none
+  color: white
+  padding: 10px
+  font-size:1em
+  box-shadow:0 0 5px #888
+  transition:all 0.1s
+
+button:hover 
+  background-color: #f81
+  box-shadow:0 0 10px #555
+
+button:active 
+  background-color: #d60
+  box-shadow:none
+
+button#refreshButton
+  padding: 5px
+  margin: 0 5px
+  width: 1.6em
+  height: 1.6em
+  border-radius:1em
+
+button#startButton.enabled
+  background:#5c5
+button#saveButton
+  display:none 
+button#clearButton
+  display:none 
+
+video 
+  background: #222
+  width: 100%
+  position:fixed 
+
+.audioTools
+  position:fixed
+  top:100px
+  right:20px
+  z-index:1
+  display:none
+
+  .audioBox
+    width:10px
+    height:200px
+    border:2px solid #fff
+    box-shadow:0 0 5px #000
+    position:relative
+
+    .audioLevel
+      position:absolute
+      bottom:0
+      left:0
+      right:0
+      height:10%
+      background-color:green
+
+  .frequencyLevel
+    position:absolute
+    right:0
+    bottom:-2em
+    color:white
+    text-shadow:0 0 5px #000
+    white-space:nowrap
+
+canvas
+  position:fixed
+  top:100px
+  left:100px
+  width:640px
+  height:480px
+  background:transparent
+  z-index:5
+
+.requirements
+  margin-top: 10px
+
+  h2
+    color: #e00
+    font-weight:bold
+    display:inline-block
+    border-bottom:1px solid #e00
+    padding:0 10px
+
+  .hidden
+    display:none
+
+.aboutPage
+  margin:30px 0 50px
+  border-top:1px solid #ddd
+  padding:10px 0
+
+  h2
+    font-size:2em
+
+  h4
+    margin-top:10px
+    margin-bottom:5px
+    font-size:1.4em
+
+  h5
+    font-size:1.2em
+    font-style:italic
+
+  .mediaBlock
+    max-width:300px
+
+    h3
+      background: #b15
+
+    > div 
+      padding:5px 10px
+
+
