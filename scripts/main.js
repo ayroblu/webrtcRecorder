@@ -150,13 +150,39 @@ var videoPlayer = {
 
       navigator.mediaDevices.getUserMedia(constraint).
         then(stream=>{
-          videl.srcObject = stream;
-          rtcRecord.start(stream);
+          if (this.record){
+            videl.srcObject = stream;
+            rtcRecord.start(stream);
+          } else {
+            this.playBuffered(stream);
+          }
           audioHandler.gotStream(stream);
         }).catch(handleError);
     });
 
     this.layoutVideoElements();
+  }
+, playBuffered(mediaStream){
+    var videoElements = Array.from(document.querySelectorAll('video'));
+    var sourceBuffers = [];
+    videoElements.map((vid,idx)=>{
+      var mediaSource = new MediaSource();
+      vid.src = URL.createObjectURL(mediaSource);
+      mediaSource.addEventListener('sourceopen', ()=>{
+        sourceBuffers[idx] = mediaSource.addSourceBuffer('video/webm; codecs="vorbis,vp9"');
+      }, false);
+      var mediaRecorder = new MediaRecorder(mediaStream);
+      mediaRecorder.ondataavailable = function (e) {
+        var reader = new FileReader();
+        reader.addEventListener("loadend", function () {
+          var arr = new Uint8Array(reader.result);
+          sourceBuffers[idx].appendBuffer(arr);
+        });
+        reader.readAsArrayBuffer(e.data);
+      };
+      mediaRecorder.start(7000);
+    });
+
   }
 , stop(isReplay, isClear){
     var videoElements = Array.from(document.querySelectorAll('video'));
@@ -181,11 +207,48 @@ var videoPlayer = {
     this.stop(null, true);
   }
 }
+//class VideoBuffer {
+//  constructor(mediaStream, config){
+//    if (!mediaStream) {
+//        throw 'MediaStream is mandatory.';
+//    }
+//    config = config || {
+//        type: 'video'
+//    };
+//
+//    this.config = new RecordRTCConfiguration(mediaStream, config);
+//  }
+//  startRecording() {
+//    if (!this.config.disableLogs) {
+//      console.debug('started recording ' + config.type + ' stream.');
+//    }
+//
+//    if (mediaRecorder) {
+//      mediaRecorder.clearRecordedData();
+//      mediaRecorder.resume();
+//      return true;
+//    }
+//
+//    initRecorder();
+//    return true;
+//  }
+//  initRecorder() {
+//    var Recorder = new GetRecorderType(mediaStream, config);
+//
+//    mediaRecorder = new Recorder(mediaStream, config);
+//    mediaRecorder.record();
+//
+//    if (!this.config.disableLogs) {
+//      console.debug('Initialized recorderType:', mediaRecorder.constructor.name, 'for output-type:', config.type);
+//    }
+//  }
+//}
 var rtcRecord = {
   start(mediaStream){
     var options = {
-      type: 'video',
-      frameInterval: 20 // minimum time between pushing frames to Whammy (in milliseconds)
+      type: 'video'
+    , frameInterval: 20 // minimum time between pushing frames to Whammy (in milliseconds)
+    , mimeType: 'video/webm'
     };
     var recordRTC = RecordRTC(mediaStream, options);
     recordRTC.startRecording();
@@ -196,8 +259,10 @@ var rtcRecord = {
       console.error('recordStreams greater than video elements');
       state.recordStreams.splice(videoElements.length);
     }
+    var elapsed_time = (new Date()).getTime();
     state.recordStreams.map((recordRTC,idx)=>{
       recordRTC.stopRecording((videoURL)=>{
+        console.log('diff:',(new Date()).getTime() - elapsed_time);
         console.log('videoURL:',videoURL);
         if (isReplay){
           videoElements[idx].src = videoURL;

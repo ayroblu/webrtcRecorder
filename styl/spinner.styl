@@ -1,0 +1,38 @@
+.spinner{
+  position:absolute;
+  width:80px;
+  transform: translateX(-50%) translateY(-50%);
+  top:40%;
+  left:50%;
+  z-index:1;
+}
+
+.spinner:before,
+.spinner:after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 35px;
+  height: 35px;
+  opacity: 0.9;
+  border: 3px solid #fff;
+  animation: processing 1s infinite ease-in-out;
+}
+.spinner:after {
+  animation-delay: -0.25s;
+}
+@keyframes processing {
+    25% {
+        transform: translateX(42px) rotate(-90deg) scale(0.5);
+    }
+    50% {
+        transform: translateX(42px) translateY(42px) rotate(-180deg);
+    }
+    75% {
+        transform: translateX(0px) translateY(42px) rotate(-270deg) scale(0.5);
+    }
+    100% {
+        transform: rotate(-360deg);
+    }
+}
