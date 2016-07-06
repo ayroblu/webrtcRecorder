@@ -109,7 +109,7 @@ var videoPlayer = {
       var width = document.documentElement.clientWidth/cols;
       var height = (document.documentElement.clientHeight-menuHeight)/rows;
       Object.assign(vid.style, {
-        width:width + "px"
+        width: width + "px"
       , height: height + "px"
       , top: parseInt(idx/cols) * height + menuHeight + "px"
       , left: idx%cols * width + "px"
@@ -203,6 +203,11 @@ var videoPlayer = {
         vid.lastTime = t;
       },100)
     },state.delay.delay*1000);
+
+    setTimeout(()=>{
+      var countdown = new Countdown(document.body, Math.floor(state.delay.delay));
+      countdown.show();
+    }, state.delay.delay%1000);
   }
 , removeDelay(){
     var videoElements = Array.from(document.querySelectorAll('video'));
@@ -382,6 +387,53 @@ var audioHandler = {
     return {rms:-1, freq:0};
   }
 }
+class Countdown {
+  constructor(parent, numElements){
+    this.parent = parent;
+    var dim = parent.getBoundingClientRect();
+    this.elements = [];
+    this.numElements = numElements;
+    for (var i = 0; i < numElements; ++i){
+      var giantNumber = ce('div');
+      giantNumber.classList.add('giantNumber');
+      giantNumber.style.lineHeight = dim.height + "px";
+      giantNumber.style.fontSize = dim.height*1/2 + "px"
+      giantNumber.innerText = i+1;
+      this.elements.push(giantNumber);
+      parent.appendChild(giantNumber);
+    }
+  }
+  show(){
+    var dim = this.parent.getBoundingClientRect();
+    this.timers = [];
+    for (let i = 0; i < this.numElements; ++i){
+      this.timers.push(setTimeout(()=>{
+        this.elements[i].style.opacity = 1;
+        this.elements[i].style.fontSize = dim.height*4/5 + "px"
+        setTimeout(()=>{
+          this.elements[i].remove();
+        },1000);
+      },(this.numElements-1-i)*1000));
+    }
+  }
+  cancelShow(){
+    this.timers.map(i=>clearTimeout(i));
+  }
+}
+var animate = {
+  fadeIn(el){
+    el.style.transition = "all 1s";
+    el.style.opacity = 1;
+  }
+, fadeInDisplay(el){
+    el.style.display = "block";
+    el.style.transition = "all 1s";
+    el.style.opacity = 1;
+    setTimeout(()=>{
+      el.style.opacity = 1;
+    });
+  }
+}
 
 var startButton = document.querySelector("#startButton")
 var clearButton = document.querySelector("#clearButton")
@@ -389,6 +441,7 @@ var faceTrackingSwitch = document.querySelector("#faceTrackingSwitch")
 var delay = document.querySelector("#delay")
 var saveButton = document.querySelector("#saveButton")
 var menu = document.querySelector(".menu")
+var aboutPage = document.querySelector(".aboutPage")
 
 startButton.onclick = function(e){
   state.button = startButton.classList.toggle('enabled') ? 
@@ -505,37 +558,37 @@ document.onkeydown = function(e) {
   if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey)
     return;
   switch(e.keyCode){
-    case keyCode.KEY_S:
-      console.log("s pressed");
-      // Giant Numbers animation
-      var giantNumbers = Array.from(document.querySelectorAll('.giantNumber'));
-      var menuHeight = document.querySelector('.menu').getBoundingClientRect().height;
+    //case keyCode.KEY_S:
+    //  console.log("s pressed");
+    //  // Giant Numbers animation
+    //  var giantNumbers = Array.from(document.querySelectorAll('.giantNumber'));
+    //  var menuHeight = document.querySelector('.menu').getBoundingClientRect().height;
 
-      var func = (numList, cb)=>{
-        numList[0].style.lineHeight = window.innerHeight-menuHeight+"px";
-        numList[0].style.opacity = 1;
-        numList[0].style.fontSize = "200px";
+    //  var func = (numList, cb)=>{
+    //    numList[0].style.lineHeight = window.innerHeight-menuHeight+"px";
+    //    numList[0].style.opacity = 1;
+    //    numList[0].style.fontSize = "200px";
 
-        // Callback on itself after delay, hide and show next
-        setTimeout(()=>{
-          var hide = numList.splice(0,1)[0];
-          hide.style.opacity = null;
-          if (numList.length > 0){
-            cb(numList, cb);
-          } else {
-            // countdown finished
-            videoPlayer.stop();
-            videoPlayer.start();
-          }
-        },1000);
-      };
-      
-      // warmup cause it ain't synced
-      if (!state.button.started){
-        func(giantNumbers, func);
-      }
-      startButton.click();
-      break;
+    //    // Callback on itself after delay, hide and show next
+    //    setTimeout(()=>{
+    //      var hide = numList.splice(0,1)[0];
+    //      hide.style.opacity = null;
+    //      if (numList.length > 0){
+    //        cb(numList, cb);
+    //      } else {
+    //        // countdown finished
+    //        videoPlayer.stop();
+    //        videoPlayer.start();
+    //      }
+    //    },1000);
+    //  };
+    //  
+    //  // warmup cause it ain't synced
+    //  if (!state.button.started){
+    //    func(giantNumbers, func);
+    //  }
+    //  startButton.click();
+    //  break;
     case keyCode.KEY_R:
       console.log("r pressed");
       startButton.click();
@@ -560,6 +613,16 @@ document.onkeydown = function(e) {
       break;
   }
 }
+var scrollRun = false;
+window.onscroll = function(e){
+  if (scrollRun) return;
+  var dim = aboutPage.getBoundingClientRect();
+  if (dim.top < window.innerHeight/2){
+    animate.fadeIn(aboutPage);
+    scrollRun = true;
+  }
+}
+window.onscroll();
 
 var facialRecognition = {
   ctx: null
