@@ -1,17 +1,21 @@
-'use strict';
+'use strict'
 
-const START_BUTTON_STATE = {started: false, text: "Start Recording"}
-const STOP_BUTTON_STATE = {started: true, text: "Stop Recording"}
+const START_BUTTON_STATE = {started: false, text: 'Start Recording'}
+const STOP_BUTTON_STATE = {started: true, text: 'Stop Recording'}
 const SHOW_SAVEBUTTON_STATE = {visible: true}
 const HIDE_SAVEBUTTON_STATE = {visible: false}
-const DISABLED_FACE_SWITCH_STATE = {enabled: false, text: "Enable Facial Tracking"}
-const ENABLED_FACE_SWITCH_STATE = {enabled: true, text: "Disable Facial Tracking"}
+const DISABLED_FACE_SWITCH_STATE = {enabled: false, text: 'Enable Facial Tracking'}
+const ENABLED_FACE_SWITCH_STATE = {enabled: true, text: 'Disable Facial Tracking'}
+const DISABLED_DELAY_SWITCH_STATE = {enabled: false}
+const ENABLED_DELAY_SWITCH_STATE = {enabled: true}
+const DEFAULT_DELAY_SWITCH_STATE = {enabled: true, delay: 6}
 const INITIAL_STATE = {
-  deviceInfos:{audiooutput:[], audioinput:[], videoinput:[]}
+  deviceInfos: {audiooutput: [], audioinput: [], videoinput: []}
 , button: START_BUTTON_STATE
 , recordStreams: []
 , saveButton: HIDE_SAVEBUTTON_STATE
 , faceTrackingSwitch: DISABLED_FACE_SWITCH_STATE
+, delay: DEFAULT_DELAY_SWITCH_STATE
 , frInterval: null
 , showVideo: false
 };
@@ -96,23 +100,24 @@ var videoPlayer = {
     var videos = Array.from(document.querySelectorAll('video'));
     var vidLabels = Array.from(document.querySelectorAll('.vidLabel'));
 
-    var divisor = Math.ceil(Math.sqrt(videos.length));
-    var menuHeight = document.querySelector('.menu').getBoundingClientRect().height;
-    //var menuHeight = 0;
+    var cols = Math.ceil(Math.sqrt(videos.length));
+    var rows = Math.ceil(videos.length/cols);
+    //var menuHeight = document.querySelector('.menu').getBoundingClientRect().height;
+    var menuHeight = 0;
 
     videos.map((vid,idx)=>{
-      var width = document.documentElement.clientWidth/divisor;
-      var height = (document.documentElement.clientHeight-menuHeight)/divisor;
+      var width = document.documentElement.clientWidth/cols;
+      var height = (document.documentElement.clientHeight-menuHeight)/rows;
       Object.assign(vid.style, {
         width:width + "px"
       , height: height + "px"
-      , top: parseInt(idx/divisor) * height + menuHeight + "px"
-      , left: idx%divisor * width + "px"
+      , top: parseInt(idx/cols) * height + menuHeight + "px"
+      , left: idx%cols * width + "px"
       });
 
       Object.assign(vidLabels[idx].style,{
-        top: parseInt(idx/divisor) * height + menuHeight + "px"
-      , left: idx%divisor * width + "px"
+        top: parseInt(idx/cols) * height + menuHeight + "px"
+      , left: idx%cols * width + "px"
       });
     });
   }
@@ -130,7 +135,8 @@ var videoPlayer = {
     state.deviceInfos.videoinput.map((dInfo,idx)=>{
       // Create all video elements
       var videl = document.createElement('video');
-      ['controls','autoplay','muted'].map((item)=>videl.setAttribute(item,''));
+      ['controls','muted'].map((item)=>videl.setAttribute(item,''));
+      //['controls','autoplay','muted'].map((item)=>videl.setAttribute(item,''));
       container.appendChild(videl);
       // Labels
       var vidLabel = document.createElement('div');
@@ -150,55 +156,87 @@ var videoPlayer = {
 
       navigator.mediaDevices.getUserMedia(constraint).
         then(stream=>{
-          if (this.record){
+          videl.stream = stream;
+          if (!state.delay.enabled || delay.classList.contains('invalid')){
             videl.srcObject = stream;
-            rtcRecord.start(stream);
           } else {
-            this.playBuffered(stream);
+            this.playBuffered(videl);
           }
+          rtcRecord.start(stream);
           audioHandler.gotStream(stream);
         }).catch(handleError);
     });
 
     this.layoutVideoElements();
   }
-, playBuffered(mediaStream){
-    var videoElements = Array.from(document.querySelectorAll('video'));
-    var sourceBuffers = [];
-    videoElements.map((vid,idx)=>{
-      var mediaSource = new MediaSource();
-      vid.src = URL.createObjectURL(mediaSource);
-      mediaSource.addEventListener('sourceopen', ()=>{
-        sourceBuffers[idx] = mediaSource.addSourceBuffer('video/webm; codecs="vorbis,vp9"');
-      }, false);
-      var mediaRecorder = new MediaRecorder(mediaStream);
-      mediaRecorder.ondataavailable = function (e) {
-        var reader = new FileReader();
-        reader.addEventListener("loadend", function () {
-          var arr = new Uint8Array(reader.result);
-          sourceBuffers[idx].appendBuffer(arr);
-        });
-        reader.readAsArrayBuffer(e.data);
-      };
-      mediaRecorder.start(7000);
-    });
+, playBuffered(vid){
+    this.bufferTimeSize = 100;
+    vid.mediaSource = new MediaSource();
 
+    vid.srcObject = null;
+    vid.src = URL.createObjectURL(vid.mediaSource);
+    vid.mediaSource.addEventListener('sourceopen', ()=>{
+      vid.sourceBuffer = vid.mediaSource.addSourceBuffer('video/webm; codecs="vorbis,vp9"');
+    }, false);
+    vid.mediaRecorder = new MediaRecorder(vid.stream);
+    vid.mediaRecorder.ondataavailable = function (e) {
+      var reader = new FileReader();
+      reader.addEventListener("loadend", function () {
+        var arr = new Uint8Array(reader.result);
+        if (vid.mediaSource.readyState === "open")
+          vid.sourceBuffer.appendBuffer(arr);
+      });
+      reader.readAsArrayBuffer(e.data);
+    };
+    vid.mediaRecorder.start(this.bufferTimeSize);
+    vid.prestart = setTimeout(()=>{
+      vid.play()
+      vid.lastTime = vid.currentTime
+      vid.checkPlaying = setInterval(()=>{
+        if (vid.paused) return;
+        var t = vid.currentTime;
+        if (vid.lastTime === t){
+          var b = vid.buffered;
+          vid.currentTime = b.end(b.length-1)-(state.delay.delay-this.bufferTimeSize/1000);
+          console.log('adjusting',state.delay.delay)
+        }
+        vid.lastTime = t;
+      },100)
+    },state.delay.delay*1000);
+  }
+, removeDelay(){
+    var videoElements = Array.from(document.querySelectorAll('video'));
+    videoElements.map((vid,idx)=>{
+      vid.srcObject = vid.stream;
+      clearTimeout(vid.prestart);
+      clearInterval(vid.checkPlaying);
+      vid.mediaRecorder.stop();
+    });
+  }
+, adjustBufferedTime(){
+    var videoElements = Array.from(document.querySelectorAll('video'));
+    videoElements.map((vid,idx)=>{
+      var b = vid.buffered;
+      vid.currentTime = b.end(b.length-1)-(state.delay.delay-this.bufferTimeSize/1000);
+    });
   }
 , stop(isReplay, isClear){
     var videoElements = Array.from(document.querySelectorAll('video'));
-    videoElements.map((el)=>{
-      el.srcObject.getVideoTracks().map((el)=>el.stop());
+    videoElements.map((vid)=>{
+      clearTimeout(vid.prestart);
+      clearInterval(vid.checkPlaying);
+      vid.stream.getVideoTracks().map((track)=>track.stop());
       if (isReplay){
         rtcRecord.stopAndReplay(videoElements);
       } else if (isClear){
         rtcRecord.clear();
-        el.remove();
+        vid.remove();
       } else {
         rtcRecord.stop(videoElements);
       }
     });
     var vidLabels = Array.from(document.querySelectorAll('.vidLabel'));
-    vidLabels.map((el)=>{el.remove()});
+    vidLabels.map(vidl=>{vidl.remove()});
   }
 , stopAndReplay(){
     this.stop(true);
@@ -207,48 +245,13 @@ var videoPlayer = {
     this.stop(null, true);
   }
 }
-//class VideoBuffer {
-//  constructor(mediaStream, config){
-//    if (!mediaStream) {
-//        throw 'MediaStream is mandatory.';
-//    }
-//    config = config || {
-//        type: 'video'
-//    };
-//
-//    this.config = new RecordRTCConfiguration(mediaStream, config);
-//  }
-//  startRecording() {
-//    if (!this.config.disableLogs) {
-//      console.debug('started recording ' + config.type + ' stream.');
-//    }
-//
-//    if (mediaRecorder) {
-//      mediaRecorder.clearRecordedData();
-//      mediaRecorder.resume();
-//      return true;
-//    }
-//
-//    initRecorder();
-//    return true;
-//  }
-//  initRecorder() {
-//    var Recorder = new GetRecorderType(mediaStream, config);
-//
-//    mediaRecorder = new Recorder(mediaStream, config);
-//    mediaRecorder.record();
-//
-//    if (!this.config.disableLogs) {
-//      console.debug('Initialized recorderType:', mediaRecorder.constructor.name, 'for output-type:', config.type);
-//    }
-//  }
-//}
 var rtcRecord = {
   start(mediaStream){
     var options = {
       type: 'video'
-    , frameInterval: 20 // minimum time between pushing frames to Whammy (in milliseconds)
+    , frameInterval: 16 // minimum time between pushing frames to Whammy (in milliseconds)
     , mimeType: 'video/webm'
+    , disableLogs: false
     };
     var recordRTC = RecordRTC(mediaStream, options);
     recordRTC.startRecording();
@@ -383,6 +386,7 @@ var audioHandler = {
 var startButton = document.querySelector("#startButton")
 var clearButton = document.querySelector("#clearButton")
 var faceTrackingSwitch = document.querySelector("#faceTrackingSwitch")
+var delay = document.querySelector("#delay")
 var saveButton = document.querySelector("#saveButton")
 var menu = document.querySelector(".menu")
 
@@ -390,6 +394,9 @@ startButton.onclick = function(e){
   state.button = startButton.classList.toggle('enabled') ? 
     STOP_BUTTON_STATE : 
     START_BUTTON_STATE;
+
+  if (!delay.classList.contains('invalid'))
+    state.delay.delay = parseFloat(delay.querySelector('.delayVal').value);
 
   if (state.button.started){
     videoPlayer.start();
@@ -454,6 +461,43 @@ faceTrackingSwitch.onclick = function(e){
     clearInterval(state.frInterval);
     facialRecognition.removeCanvases();
   }
+}
+delay.onclick = function(e){
+  state.delay = delay.classList.toggle('enabled') ? 
+    Object.assign(state.delay, ENABLED_DELAY_SWITCH_STATE) :
+    Object.assign(state.delay, DISABLED_DELAY_SWITCH_STATE)
+
+  if (state.delay.enabled){
+    var videoElements = Array.from(document.querySelectorAll('video'));
+    videoElements.map(vid=>{
+      videoPlayer.playBuffered(vid);
+    });
+  } else {
+    videoPlayer.removeDelay();
+  }
+}
+var delayVal = delay.querySelector('.delayVal')
+delayVal.onclick = function(e){
+  console.log('stoping propagation')
+  e.stopPropagation();
+}
+delayVal.onkeyup = function(e){
+  // get check if valid
+  var val = this.value
+  var isValid = parseFloat(val) == val && val >= 0.1
+  if (isValid){
+    this.classList.remove('invalid')
+
+    if (state.delay.enabled){
+      state.delay.delay = val;
+      videoPlayer.adjustBufferedTime();
+    }
+  } else {
+    this.classList.add('invalid')
+  }
+}
+delayVal.onkeydown = function(e){
+  e.stopPropagation();
 }
 
 // Keyboard shortcuts

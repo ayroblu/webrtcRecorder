@@ -68,11 +68,11 @@
   text-align:center
 
 .menu
-  transition:opacity 0.3s
+  transition:all 0.3s
 
 .menu.videoPlaying
-  transition:opacity 0.3s 1s
-  opacity:0.1
+  transition:all 0.3s 1s
+  //opacity:0.1
   position:fixed
   top:0
   left:0
@@ -80,10 +80,22 @@
   z-index:3
   background:#fff
   box-shadow:0 0 10px #555
+  transform: translateY(-100%)
 
 .menu.videoPlaying:hover
-  transition:opacity 0.3s
-  opacity:1
+  transition:all 0.3s
+  transform: none
+  //opacity:1
+
+.menu.videoPlaying:after
+  content:''
+  height:100%
+  position:absolute
+  top:100%
+  left:0
+  right:0
+.menu.videoPlaying:hover:after
+  height:10%
 
 // Probably needs a class name
 canvas
@@ -241,5 +253,23 @@ canvas
 
     > div 
       padding:5px 10px
+
+.delay
+  display:inline-block
+  .delayVal
+    margin-left: 5px
+    border:none
+    font-size:1em
+    border-bottom:2px solid #888
+    box-shadow:none
+    width:30px
+    transition:all 0.3s
+  .delayVal:focus
+    border-bottom:2px solid #5dd
+  .delayVal.invalid
+    border-bottom:2px solid #e53
+.delay:after
+  content:'s'
+
 
 
