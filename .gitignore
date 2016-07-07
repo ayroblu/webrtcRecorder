@@ -2,7 +2,6 @@
 keystonetemplate
 data
 .DS_Store
-public/css/*.css
 *.pem
 
 
