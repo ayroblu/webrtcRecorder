@@ -64,18 +64,18 @@ app.use(logger('[:mydate] :remote-addr - :remote-user ":method :url HTTP/:http-v
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
 //app.use(cookieParser());
-app.use(stylus.middleware({
-  src: path.join(__dirname, 'styl')
-, dest: path.join(__dirname, 'public')
-, compile: function(str, path) {
-    return stylus(str)
-      .use(autoprefixer())   // autoprefixer
-      .set('filename', path) // @import
-      .set('compress', true) // compress
-      .set('include css', true)
-    ;
-  }
-}));
+//app.use(stylus.middleware({
+//  src: path.join(__dirname, 'styl')
+//, dest: path.join(__dirname, 'public')
+//, compile: function(str, path) {
+//    return stylus(str)
+//      .use(autoprefixer())   // autoprefixer
+//      .set('filename', path) // @import
+//      .set('compress', true) // compress
+//      .set('include css', true)
+//    ;
+//  }
+//}));
  
 app.use(compression());
 
