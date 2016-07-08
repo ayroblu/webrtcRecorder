@@ -623,6 +623,10 @@ window.onscroll = function(e){
   }
 }
 window.onscroll();
+window.onresize = function(e){
+  console.log('resize');
+  videoPlayer.layoutVideoElements();
+}
 
 var facialRecognition = {
   ctx: null
