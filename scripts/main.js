@@ -135,7 +135,7 @@ var videoPlayer = {
     state.deviceInfos.videoinput.map(dInfo=>{
       // Create all video elements
       var videl = document.createElement('video');
-      ['controls','muted'].map((item)=>videl.setAttribute(item,''));
+      ['controls','autoload','muted'].map((item)=>videl.setAttribute(item,''));
       container.appendChild(videl);
       // Labels
       var vidLabel = document.createElement('div');
