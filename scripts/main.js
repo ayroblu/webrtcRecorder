@@ -180,6 +180,8 @@ var videoPlayer = {
           } else {
             this.playBuffered(videl);
           }
+          videl.recorder = new Recorder(stream, null);
+          videl.recorder.start();
           //rtcRecord.start(stream);
           audioHandler.gotStream(stream);
         }).catch(handleError);
@@ -249,8 +251,12 @@ var videoPlayer = {
       clearTimeout(vid.prestart);
       clearInterval(vid.checkPlaying);
       vid.stream.getVideoTracks().map((track)=>track.stop());
+      var url = vid.recorder.stop();
       if (isReplay){
         //rtcRecord.stopAndReplay(videoElements);
+        vid.srcObject = null;
+        vid.setAttribute('loop','');
+        vid.src = url;
       } else if (isClear){
         //rtcRecord.clear();
         vid.remove();
@@ -308,6 +314,77 @@ var rtcRecord = {
       });
     });
     state.recordStreams = [];
+  }
+}
+class Recorder {
+  constructor(stream, recordingCallback, options){
+    if (!stream) {
+      throw new Error('Need a stream!');
+      return;
+    }
+    options = options || {mimeType: 'video/webm'};
+    if (!MediaRecorder.isTypeSupported(options.mimeType)){
+      console.error('MimeType not supported!', options.mimeType);
+    }
+    this.mediaRecorder = new MediaRecorder(stream, options);
+    // mediaRecorder.state -> 'recording', 'inactive'
+    this.recordingCallback = recordingCallback;
+    
+    var recordedChunks = [];
+    this.recordedChunks = recordedChunks;
+    this.mediaRecorder.ondataavailable = function(e) {
+      if (event.data.size > 0) {
+        recordedChunks.push(event.data);
+      } else {
+        // no data available???
+      }
+    }
+    return this;
+  }
+  start(){
+    if (this.mediaRecorder.state === 'recording'){
+      console.error('media recorder is already recording',this.mediaRecorder.state);
+      return this;
+    }
+    this.mediaRecorder.start();
+    return this;
+  }
+  stop(){
+    if (this.mediaRecorder.state === 'inactive'){
+      console.error('Media Recorder is not recording', this.mediaRecorder.state);
+      return this.blobUrl;
+    }
+    this.mediaRecorder.stop();
+    var superBuffer = new Blob(this.recordedChunks);
+    this.blobUrl = URL.createObjectURL(superBuffer);
+    if (typeof this.recordingCallback === 'function')
+      this.recordingCallback(this.blobUrl);
+    return this.blobUrl;
+  }
+  save(filename){
+    if (!this.blobUrl) {
+      console.error("Can't save until blob created");
+      return;
+    } else if (!filename) {
+      console.error("Need a filename!");
+      return;
+    }
+    var hyperlink = document.createElement('a');
+    hyperlink.href = this.blobUrl;
+    hyperlink.target = '_blank';
+    hyperlink.download = filename;
+
+    var evt = new MouseEvent('click', {
+      view: window
+    , bubbles: true
+    , cancelable: true
+    });
+
+    hyperlink.dispatchEvent(evt);
+
+    if (!navigator.mozGetUserMedia) {
+        URL.revokeObjectURL(hyperlink.href);
+    }
   }
 }
 
@@ -539,7 +616,11 @@ saveButton.onclick = function(e){
   //Get list of streams, save
   var d = new Date();
   var n = d.toISOString().slice(0,19);
-  state.recordStreams.map((stream, idx)=>stream.save("r_"+n+"_"+idx+".webm"));
+  var vids = Array.from(qgeta('video'));
+  vids.map(vid=>{
+    vid.save("r_"+n+"_"+idx+".webm");
+  });
+  //state.recordStreams.map((stream, idx)=>stream.save("r_"+n+"_"+idx+".webm"));
 }
 faceTrackingSwitch.onclick = function(e){
   state.faceTrackingSwitch = faceTrackingSwitch.classList.toggle('enabled') ? 
@@ -685,27 +766,24 @@ var facialRecognition = {
       canvases[i].remove();
     }
   }
-, layoutCanvas(video, canvas, dim){
+, layoutCanvas(video, canvas, vidDim){
     // for each canvas set the width and height equal to video while maintaining dim aspect ratio
     var vdim = video.getBoundingClientRect();
     var vidAspectRatio = vdim.width/vdim.height;
-    var canvAspectRatio = dim.width/dim.height;
-    var newDim = {};
-    if (vidAspectRatio > canvAspectRatio){
-      newDim = {
-        width: vdim.height * canvAspectRatio
-      , height: vdim.height
-      }
-    } else {
-      newDim = {
-        width: vdim.width
-      , height: vdim.width/canvAspectRatio
-      }
+    var canvAspectRatio = vidDim.width/vidDim.height;
+    var imgDim = vidAspectRatio > canvAspectRatio ? {
+      width: vdim.height * canvAspectRatio
+    , height: vdim.height
+    } : {
+      width: vdim.width
+    , height: vdim.width/canvAspectRatio
     }
-    Object.assign(canvas.style, newDim.map((k,v)=>v+"px"));
-    Object.assign(canvas, newDim);
-    var pos = {left: (vdim.width - newDim.width) / 2 + "px", top: vdim.top+"px"}
-    Object.assign(canvas.style, pos);
+    Object.assign(canvas.style, imgDim.map((k,v)=>v+"px"));
+    Object.assign(canvas, imgDim);
+    Object.assign(canvas.style, {
+      left: (vdim.width - imgDim.width) / 2 + vdim.left + "px"
+    , top: (vdim.height - imgDim.height) / 2 + vdim.top + "px"
+    });
   }
 , getImageFromVideo(video){
     var canvas = document.createElement("canvas");
