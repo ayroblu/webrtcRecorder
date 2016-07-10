@@ -180,7 +180,7 @@ var videoPlayer = {
           } else {
             this.playBuffered(videl);
           }
-          rtcRecord.start(stream);
+          //rtcRecord.start(stream);
           audioHandler.gotStream(stream);
         }).catch(handleError);
     });
@@ -250,12 +250,12 @@ var videoPlayer = {
       clearInterval(vid.checkPlaying);
       vid.stream.getVideoTracks().map((track)=>track.stop());
       if (isReplay){
-        rtcRecord.stopAndReplay(videoElements);
+        //rtcRecord.stopAndReplay(videoElements);
       } else if (isClear){
-        rtcRecord.clear();
+        //rtcRecord.clear();
         vid.remove();
       } else {
-        rtcRecord.stop(videoElements);
+        //rtcRecord.stop(videoElements);
       }
     });
     var vidLabels = Array.from(document.querySelectorAll('.vidLabel'));
