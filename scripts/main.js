@@ -116,7 +116,7 @@ var videoPlayer = {
       });
 
       Object.assign(vidLabels[idx].style,{
-        top: parseInt(idx/cols) * height + menuHeight + "px"
+        top: parseInt(idx/cols) * height + menuHeight + 100+"px"
       , left: idx%cols * width + "px"
       });
     });
@@ -132,11 +132,10 @@ var videoPlayer = {
     // create video elements as needed
     var container = document.querySelector('.videopage');
 
-    state.deviceInfos.videoinput.map((dInfo,idx)=>{
+    state.deviceInfos.videoinput.map(dInfo=>{
       // Create all video elements
       var videl = document.createElement('video');
       ['controls','muted'].map((item)=>videl.setAttribute(item,''));
-      //['controls','autoplay','muted'].map((item)=>videl.setAttribute(item,''));
       container.appendChild(videl);
       // Labels
       var vidLabel = document.createElement('div');
@@ -151,6 +150,24 @@ var videoPlayer = {
         vidLabel.style.opacity = null;
       }
 
+      var sel = document.createElement('select');
+      Object.assign(sel.style, {
+        position: 'absolute'
+      , right: "20px"
+      , top: "60px"
+      });
+      state.deviceInfos.videoinput.map(dInfo=>{
+        var opt = document.createElement('option');
+        opt.text = dInfo.label;
+        opt.value = dInfo.value;
+        sel.add(opt);
+      });
+      sel.onchange = function(e){
+        console.log('selval:',this.value);
+        custom.start(videl, {videoSource:this.value});
+      }
+      vidLabel.appendChild(sel);
+
       //Load and start webcams
       var constraint = {audio:true, video: {deviceId: {exact:dInfo.value}}};
 
@@ -159,6 +176,7 @@ var videoPlayer = {
           videl.stream = stream;
           if (!state.delay.enabled || delay.classList.contains('invalid')){
             videl.srcObject = stream;
+            videl.play();
           } else {
             this.playBuffered(videl);
           }
@@ -432,6 +450,29 @@ var animate = {
     setTimeout(()=>{
       el.style.opacity = 1;
     });
+  }
+}
+var custom = {
+  getDevices(){
+    this.deviceInfo = [];
+    navigator.mediaDevices.enumerateDevices().then(deviceInfos=>{
+      // Handles being called several times to update labels. Preserve values.
+      for (var i = 0; i !== deviceInfos.length; ++i) {
+        var deviceInfo = deviceInfos[i];
+        //option.value = deviceInfo.deviceId;
+        if (deviceInfo.kind === 'videoinput') {
+          console.log(deviceInfo.deviceId);
+          this.deviceInfo.push(deviceInfo);
+        }
+      }
+    })
+  }
+, start(vid, data) {
+    var constraints = {
+      audio: {deviceId: data.audioSource ? {exact: data.audioSource} : undefined},
+      video: {deviceId: data.videoSource ? {exact: data.videoSource} : undefined}
+    };
+    navigator.mediaDevices.getUserMedia(constraints).then(stream=>vid.srcObject=stream);
   }
 }
 
