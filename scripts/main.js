@@ -9,6 +9,8 @@ const ENABLED_FACE_SWITCH_STATE = {enabled: true, text: 'Disable Facial Tracking
 const DISABLED_DELAY_SWITCH_STATE = {enabled: false}
 const ENABLED_DELAY_SWITCH_STATE = {enabled: true}
 const DEFAULT_DELAY_SWITCH_STATE = {enabled: true, delay: 6}
+const ENABLED_RECORD_SWITCH_STATE = {enabled: true}
+const DISABLED_RECORD_SWITCH_STATE = {enabled: false}
 const INITIAL_STATE = {
   deviceInfos: {audiooutput: [], audioinput: [], videoinput: []}
 , button: START_BUTTON_STATE
@@ -16,6 +18,7 @@ const INITIAL_STATE = {
 , saveButton: HIDE_SAVEBUTTON_STATE
 , faceTrackingSwitch: DISABLED_FACE_SWITCH_STATE
 , delay: DEFAULT_DELAY_SWITCH_STATE
+, recordSwitch: ENABLED_RECORD_SWITCH_STATE
 , frInterval: null
 , showVideo: false
 };
@@ -108,6 +111,7 @@ var videoPlayer = {
     videos.map((vid,idx)=>{
       var width = document.documentElement.clientWidth/cols;
       var height = (document.documentElement.clientHeight-menuHeight)/rows;
+      var dim = vid.getBoundingClientRect();
       Object.assign(vid.style, {
         width: width + "px"
       , height: height + "px"
@@ -118,6 +122,7 @@ var videoPlayer = {
       Object.assign(vidLabels[idx].style,{
         top: parseInt(idx/cols) * height + menuHeight + 100+"px"
       , left: idx%cols * width + "px"
+      , width: dim.width + "px"
       });
     });
   }
@@ -172,22 +177,40 @@ var videoPlayer = {
       var constraint = {audio:true, video: {deviceId: {exact:dInfo.value}}};
 
       navigator.mediaDevices.getUserMedia(constraint).
-        then(stream=>{
-          videl.stream = stream;
-          if (!state.delay.enabled || delay.classList.contains('invalid')){
-            videl.srcObject = stream;
-            videl.play();
-          } else {
-            this.playBuffered(videl);
-          }
-          videl.recorder = new Recorder(stream, null);
-          videl.recorder.start();
-          //rtcRecord.start(stream);
-          audioHandler.gotStream(stream);
-        }).catch(handleError);
+        then(state.recordSwitch.enabled ? 
+          this.gotStreamRecordFunc(videl) : this.gotStreamFunc(videl)
+        ).catch(handleError);
     });
 
     this.layoutVideoElements();
+  }
+, gotStreamRecordFunc(videl){
+    return stream=>{
+      videl.stream = stream;
+      if (!state.delay.enabled || delay.classList.contains('invalid')){
+        videl.srcObject = stream;
+        videl.play();
+      } else {
+        this.playBuffered(videl);
+      }
+      videl.recorder = new Recorder(stream, null);
+      videl.recorder.start();
+      //rtcRecord.start(stream);
+      audioHandler.gotStream(stream);
+    }
+  }
+, gotStreamFunc(videl){
+    return stream=>{
+      videl.stream = stream;
+      if (!state.delay.enabled || delay.classList.contains('invalid')){
+        videl.srcObject = stream;
+        videl.play();
+      } else {
+        this.playBuffered(videl);
+      }
+      //rtcRecord.start(stream);
+      audioHandler.gotStream(stream);
+    }
   }
 , playBuffered(vid){
     this.bufferTimeSize = 100;
@@ -251,7 +274,7 @@ var videoPlayer = {
       clearTimeout(vid.prestart);
       clearInterval(vid.checkPlaying);
       vid.stream.getVideoTracks().map((track)=>track.stop());
-      var url = vid.recorder.stop();
+      var url = vid.recorder ? vid.recorder.stop() : null;
       if (isReplay){
         //rtcRecord.stopAndReplay(videoElements);
         vid.srcObject = null;
@@ -519,6 +542,12 @@ var animate = {
   fadeIn(el){
     el.style.transition = "all 1s";
     el.style.opacity = 1;
+    el.style.transform = "none";
+  }
+, fadeOut(el){
+    el.style.transition = "all 1s";
+    el.style.opacity = 0.04;
+    el.style.transform = null;
   }
 , fadeInDisplay(el){
     el.style.display = "block";
@@ -557,6 +586,7 @@ var startButton = document.querySelector("#startButton")
 var clearButton = document.querySelector("#clearButton")
 var faceTrackingSwitch = document.querySelector("#faceTrackingSwitch")
 var delay = document.querySelector("#delay")
+var recordSwitch = document.querySelector("#recordSwitch")
 var saveButton = document.querySelector("#saveButton")
 var menu = document.querySelector(".menu")
 var aboutPage = document.querySelector(".aboutPage")
@@ -651,6 +681,20 @@ delay.onclick = function(e){
     videoPlayer.removeDelay();
   }
 }
+recordSwitch.onclick = function(e){
+  state.recordSwitch = recordSwitch.classList.toggle('enabled') ? 
+    Object.assign(state.recordSwitch, ENABLED_RECORD_SWITCH_STATE) :
+    Object.assign(state.recordSwitch, DISABLED_RECORD_SWITCH_STATE)
+
+  if (state.recordSwitch.enabled){
+    //var videoElements = Array.from(document.querySelectorAll('video'));
+    //videoElements.map(vid=>{
+    //  videoPlayer.playBuffered(vid);
+    //});
+  } else {
+    //videoPlayer.removeDelay();
+  }
+}
 var delayVal = delay.querySelector('.delayVal')
 delayVal.onclick = function(e){
   console.log('stoping propagation')
@@ -680,37 +724,6 @@ document.onkeydown = function(e) {
   if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey)
     return;
   switch(e.keyCode){
-    //case keyCode.KEY_S:
-    //  console.log("s pressed");
-    //  // Giant Numbers animation
-    //  var giantNumbers = Array.from(document.querySelectorAll('.giantNumber'));
-    //  var menuHeight = document.querySelector('.menu').getBoundingClientRect().height;
-
-    //  var func = (numList, cb)=>{
-    //    numList[0].style.lineHeight = window.innerHeight-menuHeight+"px";
-    //    numList[0].style.opacity = 1;
-    //    numList[0].style.fontSize = "200px";
-
-    //    // Callback on itself after delay, hide and show next
-    //    setTimeout(()=>{
-    //      var hide = numList.splice(0,1)[0];
-    //      hide.style.opacity = null;
-    //      if (numList.length > 0){
-    //        cb(numList, cb);
-    //      } else {
-    //        // countdown finished
-    //        videoPlayer.stop();
-    //        videoPlayer.start();
-    //      }
-    //    },1000);
-    //  };
-    //  
-    //  // warmup cause it ain't synced
-    //  if (!state.button.started){
-    //    func(giantNumbers, func);
-    //  }
-    //  startButton.click();
-    //  break;
     case keyCode.KEY_R:
       console.log("r pressed");
       startButton.click();
@@ -735,13 +748,15 @@ document.onkeydown = function(e) {
       break;
   }
 }
-var scrollRun = false;
+var aboutShown = false;
 window.onscroll = function(e){
-  if (scrollRun) return;
   var dim = aboutPage.getBoundingClientRect();
-  if (dim.top < window.innerHeight/2){
+  if (!aboutShown && dim.top < window.innerHeight/2){
     animate.fadeIn(aboutPage);
-    scrollRun = true;
+    aboutShown = true;
+  } else if(aboutShown && dim.top > window.innerHeight/2){
+    animate.fadeOut(aboutPage);
+    aboutShown = false;
   }
 }
 window.onscroll();
@@ -816,30 +831,6 @@ var facialRecognition = {
     , min_neighbors: 1
     });
     this.post(canvas, comp, canvas.width/video.videoWidth);
-
-    // detect the feature
-    //ctx.drawImage(image, 0, 0);
-    //console.log(Parallel);
-    //new HAAR.Detector(haarcascade_frontalface_alt, Parallel)
-    //  .image(image) // use the image
-    //  .interval(40) // set detection interval for asynchronous detection (if not parallel)
-    //  .complete(function(){  // onComplete callback
-    //      var i, rect, l=this.objects.length;
-    //      ///wait.style.display='none';
-    //      ctx.strokeStyle="rgba(220,0,0,1)"; ctx.lineWidth=2;
-    //      ctx.strokeRect(this.Selection.x, this.Selection.y, this.Selection.width, this.Selection.height);
-    //      ctx.strokeStyle="rgba(75,221,17,1)"; ctx.lineWidth=2;
-    //      for (i=0; i<l; i++)
-    //      {
-    //          rect=this.objects[i];
-    //          ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
-    //      }
-    //      // provide info
-    //      console.log('Selection Rectangle: ', this.Selection.toString());
-    //      console.log('Detected Features (' + l +') :', this.objects.toString());
-    //      console.log(l+" Objects found");
-    //  })
-    //  .detect(1, 1.25, 0.5, 1, true); // go
   }
 , post(canvas, comp, scale){
     // "num-faces" comp.length.toString();
