@@ -525,7 +525,7 @@ var animate = {
   }
 , fadeOut(el){
     el.style.transition = "all 1s";
-    el.style.opacity = 0.04;
+    el.style.opacity = 0;
     el.style.transform = null;
   }
 , fadeInDisplay(el){
