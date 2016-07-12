@@ -446,7 +446,7 @@ class Countdown {
   }
   cancelShow(){
     this.timers.map(i=>clearTimeout(i));
-    this.elements.map(el=>el.remove());
+    this.elements.map(el=>el.parentElement ? el.remove() : false);
   }
 }
 var animate = {
