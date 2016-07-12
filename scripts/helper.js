@@ -18,7 +18,8 @@ Element.prototype.qgeta = function(id){
 };
 
 Element.prototype.remove = function() {
-    this.parentElement.removeChild(this);
+    if (this.parentElement)
+      this.parentElement.removeChild(this);
 }
 NodeList.prototype.remove = HTMLCollection.prototype.remove = function() {
     for(var i = this.length - 1; i >= 0; i--) {
