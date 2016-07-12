@@ -241,6 +241,7 @@ var videoPlayer = {
 
     setTimeout(()=>{
       var countdown = new Countdown(document.body, Math.floor(state.delaySwitch.delay));
+      this.countdown = countdown;
       countdown.show();
     }, state.delaySwitch.delay%1000);
   }
@@ -252,6 +253,7 @@ var videoPlayer = {
       clearInterval(vid.checkPlaying);
       vid.mediaRecorder.stop();
     });
+    this.countdown.cancelShow();
   }
 , adjustBufferedTime(){
     var videoElements = Array.from(document.querySelectorAll('video'));
@@ -282,6 +284,7 @@ var videoPlayer = {
     });
     var vidLabels = Array.from(document.querySelectorAll('.vidLabel'));
     vidLabels.map(vidl=>{vidl.remove()});
+    this.countdown.cancelShow();
   }
 , stopAndReplay(){
     this.stop(true);
@@ -318,78 +321,6 @@ var videoPlayer = {
     });
   }
 }
-class Recorder {
-  constructor(stream, recordingCallback, options){
-    if (!stream) {
-      throw new Error('Need a stream!');
-      return;
-    }
-    options = options || {mimeType: 'video/webm'};
-    if (!MediaRecorder.isTypeSupported(options.mimeType)){
-      console.error('MimeType not supported!', options.mimeType);
-    }
-    this.mediaRecorder = new MediaRecorder(stream, options);
-    // mediaRecorder.state -> 'recording', 'inactive'
-    this.recordingCallback = recordingCallback;
-    
-    var recordedChunks = [];
-    this.recordedChunks = recordedChunks;
-    this.mediaRecorder.ondataavailable = function(e) {
-      if (event.data.size > 0) {
-        recordedChunks.push(event.data);
-      } else {
-        // no data available???
-      }
-    }
-    return this;
-  }
-  start(){
-    if (this.mediaRecorder.state === 'recording'){
-      console.error('media recorder is already recording',this.mediaRecorder.state);
-      return this;
-    }
-    this.mediaRecorder.start();
-    return this;
-  }
-  stop(){
-    if (this.mediaRecorder.state === 'inactive'){
-      console.error('Media Recorder is not recording', this.mediaRecorder.state);
-      return this.blobUrl;
-    }
-    this.mediaRecorder.stop();
-    var superBuffer = new Blob(this.recordedChunks);
-    this.blobUrl = URL.createObjectURL(superBuffer);
-    if (typeof this.recordingCallback === 'function')
-      this.recordingCallback(this.blobUrl);
-    return this.blobUrl;
-  }
-  save(filename){
-    if (!this.blobUrl) {
-      console.error("Can't save until blob created");
-      return;
-    } else if (!filename) {
-      console.error("Need a filename!");
-      return;
-    }
-    var hyperlink = document.createElement('a');
-    hyperlink.href = this.blobUrl;
-    hyperlink.target = '_blank';
-    hyperlink.download = filename;
-
-    var evt = new MouseEvent('click', {
-      view: window
-    , bubbles: true
-    , cancelable: true
-    });
-
-    hyperlink.dispatchEvent(evt);
-
-    if (!navigator.mozGetUserMedia) {
-        URL.revokeObjectURL(hyperlink.href);
-    }
-  }
-}
-
 
 var audioHandler = {
   buf: new Float32Array(1024)
@@ -515,6 +446,7 @@ class Countdown {
   }
   cancelShow(){
     this.timers.map(i=>clearTimeout(i));
+    this.elements.map(el=>el.remove());
   }
 }
 var animate = {
