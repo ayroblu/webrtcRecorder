@@ -107,6 +107,39 @@ html
         div
           p
             | This is the latest javascript built in to the latest browser. This can be transpiled back to ES5 by a transpiler like babel for backward compatibility
+    .help.hidden
+      div.cover
+      div.box
+        h2 Keyboard Shortcuts
+        p.shortcut
+          span.key R
+          span.shortcut Start/Stop Recording
+        p.shortcut
+          span.key C
+          span.shortcut Clear videos page
+        hr
+        p.shortcut
+          span.key D
+          span.shortcut Toggle Delay
+        p.shortcut
+          span.key E
+          span.shortcut Toggle Facial Tracking
+        hr
+        p.shortcut
+          span.key M
+          span.shortcut Mute Video
+        p.shortcut
+          span.key SPACE
+          span.shortcut Pause Video
+        p.shortcut
+          span.key J
+          span.shortcut Previous Frame during playback
+        p.shortcut
+          span.key K
+          span.shortcut Pause Video
+        p.shortcut
+          span.key L
+          span.shortcut Next Frame during playback
     script.
       if (!MediaRecorder || !MediaRecorder.isTypeSupported ||
       !MediaRecorder.isTypeSupported('video/webm')) {

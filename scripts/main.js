@@ -1,26 +1,37 @@
 'use strict'
 
-const START_BUTTON_STATE = {started: false, text: 'Start Recording'}
-const STOP_BUTTON_STATE = {started: true, text: 'Stop Recording'}
-const SHOW_SAVEBUTTON_STATE = {visible: true}
-const HIDE_SAVEBUTTON_STATE = {visible: false}
-const DISABLED_FACE_SWITCH_STATE = {enabled: false, text: 'Enable Facial Tracking'}
-const ENABLED_FACE_SWITCH_STATE = {enabled: true, text: 'Disable Facial Tracking'}
-const DISABLED_DELAY_SWITCH_STATE = {enabled: false}
-const ENABLED_DELAY_SWITCH_STATE = {enabled: true}
-const DEFAULT_DELAY_SWITCH_STATE = {enabled: true, delay: 6}
-const VIDEO_HIDDEN_STATE = 0b1 //"hidden"
-const VIDEO_RECORDING_STATE = 0b10 //"recording"
-const VIDEO_PLAYBACK_STATE = 0b100 //"playback"
+const STATES = {
+  REC_BUTTON: {
+    STARTED: {started: false, text: 'Start Recording'}
+  , STOPPED: {started: true, text: 'Stop Recording'}
+  }
+, SAVE_BUTTON: {
+    SHOWN: {visible: true}
+  , HIDDEN: {visible: false}
+  }
+, FACE_SWITCH: {
+    DISABLED: {enabled: false, text: 'Enable Facial Tracking'}
+  , ENABLED: {enabled: true, text: 'Disable Facial Tracking'}
+  }
+, DELAY_SWITCH: {
+    DISABLED: {enabled: false}
+  , ENABLED: {enabled: true}
+  , DEFAULT: {enabled: true, delay: 6}
+  }
+, VIDEOS: {
+    HIDDEN: 0b1 //"hidden"
+  , RECORDING: 0b10 //"recording"
+  , PLAYBACK: 0b100 //"playback"
+  }
+}
 const INITIAL_STATE = {
   deviceInfos: {audiooutput: [], audioinput: [], videoinput: []}
-, button: START_BUTTON_STATE
-, recordStreams: []
-, saveButton: HIDE_SAVEBUTTON_STATE
-, faceTrackingSwitch: DISABLED_FACE_SWITCH_STATE
-, delaySwitch: DEFAULT_DELAY_SWITCH_STATE
+, recordButton: STATES.REC_BUTTON.STARTED
+, saveButton: STATES.SAVE_BUTTON.HIDDEN
+, faceTrackingSwitch: STATES.FACE_SWITCH.DISABLED
+, delaySwitch: STATES.DELAY_SWITCH.DEFAULT
 , frInterval: null
-, videoState: VIDEO_HIDDEN_STATE
+, videoState: STATES.VIDEOS_HIDDEN
 };
 var state = cloneObject(INITIAL_STATE);
 
@@ -132,7 +143,6 @@ var videoPlayer = {
     // clear as needed
     var videoElements = Array.from(document.querySelectorAll('video'));
     videoElements.map(el=>el.remove());
-    state.recordStreams = [];
     var vidLabels = Array.from(document.querySelectorAll('.vidLabel'));
     vidLabels.map(el=>el.remove());
 
@@ -549,11 +559,12 @@ var delaySwitch = document.querySelector("#delaySwitch")
 var saveButton = document.querySelector("#saveButton")
 var menu = document.querySelector(".menu")
 var aboutPage = document.querySelector(".aboutPage")
+var help = document.querySelector(".help")
 
 startButton.onclick = function(e){
   state.button = startButton.classList.toggle('enabled') ? 
-    STOP_BUTTON_STATE : 
-    START_BUTTON_STATE;
+    STATES.REC_BUTTON.STOPPED : 
+    STATES.REC_BUTTON.STARTED
 
   if (!delaySwitch.classList.contains('invalid'))
     state.delaySwitch.delay = parseFloat(delaySwitch.querySelector('.delayVal').value);
@@ -561,8 +572,8 @@ startButton.onclick = function(e){
   if (state.button.started){
     videoPlayer.start();
 
-    state.videoState = VIDEO_RECORDING_STATE;
-    state.saveButton = HIDE_SAVEBUTTON_STATE;
+    state.videoState = STATES.VIDEOS.RECORDING;
+    state.saveButton = STATES.SAVE_BUTTON.HIDDEN;
     if (state.faceTrackingSwitch.enabled)
       state.frInterval = setInterval(()=>facialRecognition.run(), 1500);
   } else {
@@ -571,14 +582,14 @@ startButton.onclick = function(e){
     clearInterval(state.frInterval);
     facialRecognition.removeCanvases();
 
-    state.videoState = VIDEO_PLAYBACK_STATE;
-    state.saveButton = SHOW_SAVEBUTTON_STATE;
+    state.videoState = STATES.VIDEOS.PLAYBACK;
+    state.saveButton = STATES.SAVE_BUTTON.SHOWN;
   }
   this.innerText = state.button.text;
   saveButton.style.display = state.saveButton.visible ? "inline-block" : null;
   clearButton.style.display = "inline-block";
   menu.classList.add('videoPlaying');
-  if (!(state.videoState & VIDEO_HIDDEN_STATE)){
+  if (!(state.videoState & STATES.VIDEOS.HIDDEN)){
     var videoCover = qget('.videoCover');
     videoCover.style.display = "block";
   }
@@ -589,9 +600,9 @@ clearButton.onclick = function(e){
   clearInterval(state.frInterval);
   facialRecognition.removeCanvases();
 
-  state.button = START_BUTTON_STATE;
-  state.saveButton = HIDE_SAVEBUTTON_STATE;
-  state.videoState = VIDEO_HIDDEN_STATE;
+  state.button = STATES.REC_BUTTON.STARTED;
+  state.saveButton = STATES.SAVE_BUTTON.HIDDEN;
+  state.videoState = STATES.VIDEOS.HIDDEN;
 
   startButton.innerText = state.button.text;
   state.button = startButton.classList.remove('enabled');
@@ -607,8 +618,8 @@ saveButton.onclick = function(e){
 }
 faceTrackingSwitch.onclick = function(e){
   state.faceTrackingSwitch = faceTrackingSwitch.classList.toggle('enabled') ? 
-    ENABLED_FACE_SWITCH_STATE : 
-    DISABLED_FACE_SWITCH_STATE;
+    STATES.FACE_SWITCH.ENABLED: 
+    STATES.FACE_SWITCH.DISABLED;
 
   // Render
   var textNode = this.qget('span');
@@ -622,10 +633,10 @@ faceTrackingSwitch.onclick = function(e){
 }
 delaySwitch.onclick = function(e){
   state.delaySwitch = delaySwitch.classList.toggle('enabled') ? 
-    Object.assign(state.delaySwitch, ENABLED_DELAY_SWITCH_STATE) :
-    Object.assign(state.delaySwitch, DISABLED_DELAY_SWITCH_STATE)
+    Object.assign(state.delaySwitch, STATES.DELAY_SWITCH.ENABLED) :
+    Object.assign(state.delaySwitch, STATES.DELAY_SWITCH.DISABLED)
 
-  if (!(state.videoState & VIDEO_RECORDING_STATE))
+  if (!(state.videoState & STATES.VIDEOS.RECORDING))
     return;
 
   if (state.delaySwitch.enabled){
@@ -652,7 +663,7 @@ delayVal.onkeyup = function(e){
     if (state.delaySwitch.enabled){
       state.delaySwitch.delay = val;
 
-      if (state.videoState & VIDEO_RECORDING_STATE)
+      if (state.videoState & STATES.VIDEOS.RECORDING)
         videoPlayer.adjustBufferedTime();
     }
   } else {
@@ -662,33 +673,75 @@ delayVal.onkeyup = function(e){
 delayVal.onkeydown = function(e){
   e.stopPropagation();
 }
+help.querySelector('div.cover').onclick = function(){
+  help.classList.toggle('hidden');
+}
 
 // Keyboard shortcuts
 document.onkeydown = function(e) {
+  if (e.keyCode === keyCode.FORWARD_SLASH && e.shiftKey) {
+    console.debug("? pressed");
+    help.classList.toggle('hidden');
+    return;
+  }
   if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey)
     return;
   switch(e.keyCode){
     case keyCode.KEY_R:
-      console.log("r pressed");
+      console.debug("r pressed");
       startButton.click();
       break;
     case keyCode.KEY_C:
-      console.log("c pressed");
+      console.debug("c pressed");
       clearButton.click();
       break;
+    case keyCode.KEY_K:
     case keyCode.SPACE:
-      console.log("space pressed");
+      console.debug("space pressed");
       var videoElements = Array.from(document.querySelectorAll('video'));
       videoElements.map((el)=>{
         el.paused ? el.play() : el.pause();
       });
       break;
     case keyCode.KEY_M:
-      console.log("m pressed");
+      console.debug("m pressed");
       var videoElements = Array.from(document.querySelectorAll('video'));
       videoElements.map((el)=>{
         el.muted = el.muted ? false : true
       });
+      break;
+    case keyCode.KEY_D:
+      console.debug("d pressed");
+      delaySwitch.onclick();
+      break;
+    case keyCode.KEY_E:
+      console.debug("e pressed");
+      faceTrackingSwitch.onclick();
+      break;
+    case keyCode.KEY_J:
+      console.debug("j pressed");
+      if (state.videoState === STATES.VIDEOS.PLAYBACK) {
+        var videoElements = Array.from(document.querySelectorAll('video'));
+        videoElements.map((vid)=>{
+          if (!vid.paused)
+            vid.pause();
+          if (vid.currentTime > 1/30)
+            vid.currentTime -= 1/30;
+        });
+      }
+      break;
+    case keyCode.KEY_L:
+      console.debug("l pressed");
+      if (state.videoState === STATES.VIDEOS.PLAYBACK) {
+        var videoElements = Array.from(document.querySelectorAll('video'));
+        videoElements.map(vid=>{
+          if (!vid.paused)
+            vid.pause();
+          var b = vid.buffered;
+          if (b.length && vid.currentTime < b.end(b.length-1) - 1/30)
+            vid.currentTime += 1/30;
+        });
+      }
       break;
   }
 }

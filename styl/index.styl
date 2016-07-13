@@ -278,5 +278,44 @@ canvas
 .delay:after
   content:'s'
 
+.help
+  div.cover
+    position: fixed
+    z-index:5
+    left: 0
+    top: 0
+    right: 0
+    bottom: 0
+    background: #888
+    opacity: 0.5
+
+  div.box
+    position:fixed
+    z-index:6
+    padding:20px
+    background:#eee
+    box-shadow: 0 0 10px #888
+    left: 50%
+    top: 50%
+    transform: translate(-50%, -50%)
+
+    h2
+      margin: 0 10px
+    
+    hr
+      margin-top: 10px
+    p.shortcut
+      margin-top: 5px
+      text-align:left
+      span.key
+        margin-right: 15px
+        text-align: right
+        width: 5em
+        display: inline-block
+      span.shortcut
+        color:#888
+        text-align: left
+
+  
 
 
