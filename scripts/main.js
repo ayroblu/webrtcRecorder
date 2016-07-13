@@ -9,6 +9,9 @@ const ENABLED_FACE_SWITCH_STATE = {enabled: true, text: 'Disable Facial Tracking
 const DISABLED_DELAY_SWITCH_STATE = {enabled: false}
 const ENABLED_DELAY_SWITCH_STATE = {enabled: true}
 const DEFAULT_DELAY_SWITCH_STATE = {enabled: true, delay: 6}
+const VIDEO_HIDDEN_STATE = 0b1 //"hidden"
+const VIDEO_RECORDING_STATE = 0b10 //"recording"
+const VIDEO_PLAYBACK_STATE = 0b100 //"playback"
 const INITIAL_STATE = {
   deviceInfos: {audiooutput: [], audioinput: [], videoinput: []}
 , button: START_BUTTON_STATE
@@ -17,7 +20,7 @@ const INITIAL_STATE = {
 , faceTrackingSwitch: DISABLED_FACE_SWITCH_STATE
 , delaySwitch: DEFAULT_DELAY_SWITCH_STATE
 , frInterval: null
-, showVideo: false
+, videoState: VIDEO_HIDDEN_STATE
 };
 var state = cloneObject(INITIAL_STATE);
 
@@ -136,76 +139,82 @@ var videoPlayer = {
     // create video elements as needed
     var container = document.querySelector('.videopage');
 
-    state.deviceInfos.videoinput.map(dInfo=>{
+    state.deviceInfos.videoinput.map((dInfo,idx)=>{
       // Create all video elements
       var videl = document.createElement('video');
       ['controls','autoplay','muted'].map((item)=>videl.setAttribute(item,''));
       container.appendChild(videl);
-      // Labels
-      var vidLabel = document.createElement('div');
-      vidLabel.className = "vidLabel";
-      vidLabel.innerText = dInfo.label;
-      container.appendChild(vidLabel);
-      // Label hover effects
-      videl.onmouseenter=(e)=>{
-        vidLabel.style.opacity = 1;
-      }
-      videl.onmouseleave=(e)=>{
-        vidLabel.style.opacity = null;
-      }
 
-      var sel = document.createElement('select');
-      Object.assign(sel.style, {
-        position: 'absolute'
-      , right: "20px"
-      , top: "60px"
-      });
-      state.deviceInfos.videoinput.map(dInfo=>{
-        var opt = document.createElement('option');
-        opt.text = dInfo.label;
-        opt.value = dInfo.value;
-        sel.add(opt);
-      });
-      sel.onchange = function(e){
-        console.log('selval:',this.value);
-        custom.start(videl, {videoSource:this.value});
-      }
-      vidLabel.appendChild(sel);
+      this.layoutLabels(videl, container, dInfo, idx);
 
       //Load and start webcams
       var constraint = {audio:true, video: {deviceId: {exact:dInfo.value}}};
 
       navigator.mediaDevices.getUserMedia(constraint).
-        then(this.gotStreamFunc(videl)).catch(handleError);
+        then(stream=>{
+          videl.stream = stream;
+          this.startRecorder(videl);
+          if (!state.delaySwitch.enabled || delaySwitch.classList.contains('invalid')){
+            videl.srcObject = stream;
+            videl.play();
+          } else {
+            this.playBuffered(videl);
+          }
+          audioHandler.gotStream(stream);
+        }).catch(handleError);
     });
 
     this.layoutVideoElements();
   }
-, gotStreamFunc(videl){
-    return stream=>{
-      videl.stream = stream;
-      if (!state.delaySwitch.enabled || delay.classList.contains('invalid')){
-        videl.srcObject = stream;
-        videl.play();
-      } else {
-        this.playBuffered(videl);
-      }
-      audioHandler.gotStream(stream);
+, layoutLabels(videl, container, dInfo, idx){
+    // Labels
+    var vidLabel = document.createElement('div');
+    vidLabel.className = "vidLabel";
+    vidLabel.innerText = dInfo.label;
+    container.appendChild(vidLabel);
+    // Label hover effects
+    videl.onmouseenter=(e)=>{
+      vidLabel.style.opacity = 1;
     }
+    videl.onmouseleave=(e)=>{
+      vidLabel.style.opacity = null;
+    }
+
+    var sel = document.createElement('select');
+    Object.assign(sel.style, {
+      position: 'absolute'
+    , right: "20px"
+    , top: "60px"
+    });
+    state.deviceInfos.videoinput.map(dInfo=>{
+      var opt = document.createElement('option');
+      opt.text = dInfo.label;
+      opt.value = dInfo.value;
+      sel.add(opt);
+    });
+    if (sel.children && sel.children.length > idx)
+      sel.value = sel.children[idx].value;
+
+    sel.onchange = function(e){
+      console.log('selval:',this.value);
+      custom.start(videl, {videoSource:this.value});
+    }
+    vidLabel.appendChild(sel);
   }
-, playBuffered(vid){
+, startRecorder(vid, disableSourceBuffer){
     this.bufferTimeSize = 100;
     vid.mediaSource = new MediaSource();
+    vid.mediaUrl = URL.createObjectURL(vid.mediaSource);
 
-    vid.srcObject = null;
-    vid.src = URL.createObjectURL(vid.mediaSource);
+    //vid.srcObject = null;
+    //vid.src = URL.createObjectURL(vid.mediaSource);
     vid.mediaSource.addEventListener('sourceopen', ()=>{
+      console.debug('source opened');
       vid.sourceBuffer = vid.mediaSource.addSourceBuffer('video/webm; codecs="vorbis,vp9"');
     }, false);
     vid.mediaRecorder = new MediaRecorder(vid.stream);
 
-    var recordedChunks = [];
-    vid.recordedChunks = recordedChunks;
+    vid.recordedChunks = [];
     vid.mediaRecorder.ondataavailable = function (e) {
       var reader = new FileReader();
       reader.addEventListener("loadend", function () {
@@ -215,20 +224,30 @@ var videoPlayer = {
       });
       reader.readAsArrayBuffer(e.data);
 
-      if (event.data.size > 0) {
-        recordedChunks.push(event.data);
+      if (event.data.size > 0 && vid.recordedChunks) {
+        vid.recordedChunks.push(event.data);
       } else {
         console.debug('no data available');
       }
     };
     vid.mediaRecorder.start(this.bufferTimeSize);
+  }
+, restartRecorder(vid){
+    vid.mediaRecorder.stop();
+    this.startRecorder(vid);
+  }
+, playBuffered(vid){
+    vid.srcObject = null;
+    vid.src = vid.mediaUrl;
+    window.vid = vid;
+
     vid.prestart = setTimeout(()=>{
       vid.play()
       vid.lastTime = vid.currentTime
       vid.checkPlaying = setInterval(()=>{
         if (vid.paused) return;
         var t = vid.currentTime;
-        if (vid.lastTime === t){
+        if (vid.lastTime === t && vid.buffered.length){
           var b = vid.buffered;
           vid.currentTime = b.end(b.length-1)-(state.delaySwitch.delay-this.bufferTimeSize/1000);
           console.log('adjusting',state.delaySwitch.delay)
@@ -236,7 +255,8 @@ var videoPlayer = {
         vid.lastTime = t;
       },100)
       var buf = vid.buffered;
-      vid.currentTime = buf.end(buf.length-1)-(state.delaySwitch.delay-this.bufferTimeSize/1000);
+      if (buf.length)
+        vid.currentTime = buf.end(buf.length-1)-(state.delaySwitch.delay-this.bufferTimeSize/1000);
     },state.delaySwitch.delay*1000);
 
     setTimeout(()=>{
@@ -251,9 +271,9 @@ var videoPlayer = {
       vid.srcObject = vid.stream;
       clearTimeout(vid.prestart);
       clearInterval(vid.checkPlaying);
-      vid.mediaRecorder.stop();
     });
-    this.countdown.cancelShow();
+    if (this.countdown)
+      this.countdown.cancelShow();
   }
 , adjustBufferedTime(){
     var videoElements = Array.from(document.querySelectorAll('video'));
@@ -284,7 +304,8 @@ var videoPlayer = {
     });
     var vidLabels = Array.from(document.querySelectorAll('.vidLabel'));
     vidLabels.map(vidl=>{vidl.remove()});
-    this.countdown.cancelShow();
+    if (this.countdown)
+      this.countdown.cancelShow();
   }
 , stopAndReplay(){
     this.stop(true);
@@ -468,6 +489,34 @@ var animate = {
       el.style.opacity = 1;
     });
   }
+, fadeInChildren(el){
+    el.style.transition = "none";
+    el.style.opacity = 1;
+    el.style.transform = "none";
+    var children = Array.from(el.children);
+    children.forEach((child,idx)=>{
+      setTimeout(()=>{
+        child.style.transition = "all 1s";
+        child.style.opacity = 1;
+        child.style.transform = "none";
+      }, idx*100);
+    });
+  }
+, fadeOutChildren(el){
+    var children = Array.from(el.children).reverse();
+    setTimeout(()=>{
+      el.style.transition = "all 1s";
+      el.style.opacity = 0;
+      el.style.transform = null;
+    }, children.length * 100);
+    children.forEach((child,idx)=>{
+      setTimeout(()=>{
+        child.style.transition = "all 1s";
+        child.style.opacity = 0;
+        child.style.transform = null;
+      }, idx*100);
+    });
+  }
 }
 var custom = {
   getDevices(){
@@ -496,7 +545,7 @@ var custom = {
 var startButton = document.querySelector("#startButton")
 var clearButton = document.querySelector("#clearButton")
 var faceTrackingSwitch = document.querySelector("#faceTrackingSwitch")
-var delay = document.querySelector("#delay")
+var delaySwitch = document.querySelector("#delaySwitch")
 var saveButton = document.querySelector("#saveButton")
 var menu = document.querySelector(".menu")
 var aboutPage = document.querySelector(".aboutPage")
@@ -506,13 +555,13 @@ startButton.onclick = function(e){
     STOP_BUTTON_STATE : 
     START_BUTTON_STATE;
 
-  if (!delay.classList.contains('invalid'))
-    state.delaySwitch.delay = parseFloat(delay.querySelector('.delayVal').value);
+  if (!delaySwitch.classList.contains('invalid'))
+    state.delaySwitch.delay = parseFloat(delaySwitch.querySelector('.delayVal').value);
 
   if (state.button.started){
     videoPlayer.start();
 
-    state.showVideo = true;
+    state.videoState = VIDEO_RECORDING_STATE;
     state.saveButton = HIDE_SAVEBUTTON_STATE;
     if (state.faceTrackingSwitch.enabled)
       state.frInterval = setInterval(()=>facialRecognition.run(), 1500);
@@ -522,13 +571,14 @@ startButton.onclick = function(e){
     clearInterval(state.frInterval);
     facialRecognition.removeCanvases();
 
+    state.videoState = VIDEO_PLAYBACK_STATE;
     state.saveButton = SHOW_SAVEBUTTON_STATE;
   }
   this.innerText = state.button.text;
   saveButton.style.display = state.saveButton.visible ? "inline-block" : null;
   clearButton.style.display = "inline-block";
-  menu.classList.add('videoPlaying'); //i guess maybe state.showVideo
-  if (state.showVideo){
+  menu.classList.add('videoPlaying');
+  if (!(state.videoState & VIDEO_HIDDEN_STATE)){
     var videoCover = qget('.videoCover');
     videoCover.style.display = "block";
   }
@@ -541,7 +591,7 @@ clearButton.onclick = function(e){
 
   state.button = START_BUTTON_STATE;
   state.saveButton = HIDE_SAVEBUTTON_STATE;
-  state.showVideo = false;
+  state.videoState = VIDEO_HIDDEN_STATE;
 
   startButton.innerText = state.button.text;
   state.button = startButton.classList.remove('enabled');
@@ -570,21 +620,25 @@ faceTrackingSwitch.onclick = function(e){
     facialRecognition.removeCanvases();
   }
 }
-delay.onclick = function(e){
-  state.delaySwitch = delay.classList.toggle('enabled') ? 
+delaySwitch.onclick = function(e){
+  state.delaySwitch = delaySwitch.classList.toggle('enabled') ? 
     Object.assign(state.delaySwitch, ENABLED_DELAY_SWITCH_STATE) :
     Object.assign(state.delaySwitch, DISABLED_DELAY_SWITCH_STATE)
+
+  if (!(state.videoState & VIDEO_RECORDING_STATE))
+    return;
 
   if (state.delaySwitch.enabled){
     var videoElements = Array.from(document.querySelectorAll('video'));
     videoElements.map(vid=>{
+      videoPlayer.restartRecorder(vid);
       videoPlayer.playBuffered(vid);
     });
   } else {
     videoPlayer.removeDelay();
   }
 }
-var delayVal = delay.querySelector('.delayVal')
+var delayVal = delaySwitch.querySelector('.delayVal')
 delayVal.onclick = function(e){
   e.stopPropagation();
 }
@@ -597,7 +651,9 @@ delayVal.onkeyup = function(e){
 
     if (state.delaySwitch.enabled){
       state.delaySwitch.delay = val;
-      videoPlayer.adjustBufferedTime();
+
+      if (state.videoState & VIDEO_RECORDING_STATE)
+        videoPlayer.adjustBufferedTime();
     }
   } else {
     this.classList.add('invalid')
@@ -640,14 +696,14 @@ var aboutShown = false;
 window.onscroll = function(e){
   var dim = aboutPage.getBoundingClientRect();
   if (!aboutShown && dim.top < window.innerHeight/2){
-    animate.fadeIn(aboutPage);
+    animate.fadeInChildren(aboutPage);
     aboutShown = true;
   } else if(aboutShown && dim.top > window.innerHeight/2){
-    animate.fadeOut(aboutPage);
+    animate.fadeOutChildren(aboutPage);
     aboutShown = false;
   }
 }
-window.onscroll();
+//window.onscroll();
 window.onresize = function(e){
   console.log('resize');
   videoPlayer.layoutVideoElements();

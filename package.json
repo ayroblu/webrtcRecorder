@@ -7,8 +7,7 @@
   "scripts": {
     "start": "nodemon --ignore public ./server.js",
     "build": "npm run buildcss && npm run buildjs",
-    "buildjs": "babel --minified scripts/{adapter.js,face.js,helper.js,main.js} -o public/js/scripts.js",
-    "buildjsold": "babel --minified scripts/{adapter.js,common.js,face.js,helper.js,RecordRTC.js,main.js} -o public/js/scripts.js",
+    "buildjs": "babel --presets es2016 --comments=false --minified scripts/{adapter.js,face.js,helper.js,main.js} -o public/js/scripts.js",
     "buildcss": "(cd styl && stylus -u autoprefixer-stylus --include-css -c < index.styl > ../public/css/index.css)"
   },
   "dependencies": {
@@ -33,6 +32,7 @@
     "uglify-js": "^2.6.1"
   },
   "devDependencies": {
-    "babel-cli": "^6.10.1"
+    "babel-cli": "^6.10.1",
+    "babel-preset-es2016": "^6.11.3"
   }
 }

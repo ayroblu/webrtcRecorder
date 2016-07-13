@@ -75,7 +75,7 @@
   background:#fff
 
 .menu.videoPlaying
-  transition:all 0.3s 1s
+  transition:all 0.3s 0.3s
   //opacity:0.1
   position:fixed
   top:0
@@ -235,7 +235,10 @@ canvas
   border-top:1px solid #ddd
   padding:10px 0
   opacity:0
-  transform:translateY(50px)
+
+  > *
+    opacity:0
+    transform:translateY(50px)
 
   h2
     font-size:2em
