@@ -79,8 +79,8 @@ app.use(bodyParser.urlencoded({ extended: true })); // for parsing application/x
  
 app.use(compression());
 
-var oneDay = 86400000;
-app.use(express.static(path.join(__dirname, 'public'), { maxAge: oneDay*7 }));
+//var oneDay = 86400000;
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', routes);
 
