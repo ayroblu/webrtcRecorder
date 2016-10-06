@@ -3,6 +3,7 @@ keystonetemplate
 data
 .DS_Store
 *.pem
+public/css/*.css
 
 
 # vim
